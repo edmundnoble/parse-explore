@@ -22,6 +22,10 @@ splits n xs = do
         rec <- splits (n - 1) r
         return ((l:) rec)
 
+unger :: forall n t. (Show n, Show t) => Eq t => Ord n =>
+        CFG n t -> [t] -> Maybe (PForest n t)
+unger cfg sent = ungerOr cfg sent (cfgStart cfg)
+
 ungerOr :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         CFG n t -> [t] -> n -> Maybe (PForest n t)
 ungerOr cfg sent guess = let
@@ -45,7 +49,7 @@ ungerAnd cfg k ks = PAnd k <$> traverse rec ks
 -- just a recognizer for now :/
 ungerRec :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         [t] -> CFG n t -> Bool
-ungerRec ts cfg = go ts (startCFG cfg) where
+ungerRec ts cfg = go ts (cfgStart cfg) where
         go :: [t] -> n -> Bool
         go sent guess = let
                 rhs :: [[Either n t]]
@@ -62,15 +66,3 @@ ungerRec ts cfg = go ts (startCFG cfg) where
                 validSubPartition (T t,ts) = ts == [t]
                 validSubPartition (N n,ts) = go ts n
                 in any (all validSubPartition) labelledPartitions
-
-data TDH
-        = Name
-        | Sentence
-        | List
-        deriving (Eq, Ord, Show)
-
-tdhGram = CFG Sentence (Map.fromList [
-        (Name, (fmap T <$> ["tom", "dick", "harry"])),
-        (Sentence, [[N Name], [N List] ++ (T <$> "and") ++ [Left Name]]),
-        (List, [[Left Name, Right ',', Left List], [Left Name]])
-        ])
