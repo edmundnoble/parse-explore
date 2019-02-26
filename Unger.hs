@@ -4,12 +4,16 @@ module Unger where
 
 import Control.Monad(guard, join)
 import Debug.Trace
+import Data.ByteString(ByteString)
+import Data.Char(ord)
 import Data.Functor(($>))
 import Data.Hashable
 import Data.List(inits, tails)
 import Data.Map(Map)
 import Data.Maybe(catMaybes, fromJust)
 import qualified Data.Map as Map
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Unsafe as BSU
 
 import Common
 
@@ -22,6 +26,38 @@ splits n xs = do
         (l, r) <- zip (inits xs) (tails xs)
         rec <- splits (n - 1) r
         return ((l:) rec)
+
+splitsBS :: Int -> ByteString -> [[ByteString]]
+splitsBS 1 xs = [[xs]]
+splitsBS n xs = do
+        (l, r) <- zip (BS.inits xs) (BS.tails xs)
+        rec <- splitsBS (n - 1) r
+        rec `seq` return (l:rec)
+
+ungerBS :: forall n. (Show n) => Ord n =>
+        CFG n Char -> ByteString -> Maybe (PForest n Char)
+ungerBS cfg sent = ungerOrBS cfg sent (cfgStart cfg)
+
+ungerOrBS :: forall n. (Show n) => Ord n =>
+        CFG n Char -> ByteString -> n -> Maybe (PForest n Char)
+ungerOrBS cfg sent guess = let
+        rhs = ruleCFG cfg guess
+        mkLabelledPartitions n fs = fmap ((,) n . zip fs) $ splitsBS (length fs) sent
+        labelledPartitions = ([0..length rhs] `zip` rhs) >>= uncurry mkLabelledPartitions
+        rec = (catMaybes (uncurry (ungerAndBS cfg) <$> labelledPartitions))
+        in guard (not $ null rec) $> POr guess rec
+
+ungerAndBS :: forall n. (Show n) => Ord n =>
+        CFG n Char -> Int -> [(Either n Char, ByteString)] -> Maybe (PAnd n Char)
+ungerAndBS cfg k ks = PAnd k <$> ((guard (all matching ks)) *> traverse rec ks)
+        where
+        -- an extra "breadth-firsty" stage to get us terminating
+        matching :: (Either n Char, ByteString) -> Bool
+        matching (T t, ts) = BS.length ts == 1 && BSU.unsafeHead ts == fromIntegral (ord t)
+        matching _         = True
+        rec :: (Either n Char, ByteString) -> Maybe (PForest n Char)
+        rec (T t, _)  = Just (PForestLeaf t)
+        rec (N n, ts) = ungerOrBS cfg ts n
 
 heurUnger :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
         CCFG n t -> [t] -> Maybe (PForest n t)

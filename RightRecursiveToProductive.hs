@@ -58,19 +58,19 @@ deq (BQueue fs []) = Just (head rev, BQueue [] (tail rev))
 quempty :: BQueue a
 quempty = BQueue [] []
 
-genProductive :: (Ord n, Ord t) => Productive n t -> Set [t]
-genProductive (Productive start rules) =
-        go (enq [Left start] quempty)
-        where
-        go :: BQueue (Set [Either n t]) -> Set [t]
-        go q = case deq q of
-                Nothing -> Set.empty
-                Just sent -> if (all isRight sent)
-                        then undefined
-                        else undefined
-        exp [] = []
-        exp (Right t:sent') = exp sent'
-        exp (Left n:sent') = exp sent'
+-- genProductive :: (Ord n, Ord t) => Productive n t -> Set [t]
+-- genProductive (Productive start rules) =
+--         go (enq [Left start] quempty)
+--         where
+--         go :: BQueue (Set [Either n t]) -> Set [t]
+--         go q = case deq q of
+--                 Nothing -> Set.empty
+--                 Just sent -> if (all isRight sent)
+--                         then undefined
+--                         else undefined
+--         exp [] = []
+--         exp (Right t:sent') = exp sent'
+--         exp (Left n:sent') = exp sent'
 
 expandOnce :: (Ord n, Ord t) => PRules n t -> [Either n t] -> Set [Either n t]
 expandOnce rules [] = Set.empty

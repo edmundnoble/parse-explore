@@ -38,13 +38,13 @@ type AnnotCFRules a n t = Map n (a, [[Either n t]])
 data AnnotCFG n t a = ACFG n (AnnotCFRules a n t)
         deriving (Functor, Show)
 
-data PTree n t = PNode n [PTree n t] | PLeaf t
+data PTree n t = PNode !n ![PTree n t] | PLeaf !t
         deriving (Show)
 
-data PAnd n t = PAnd Int [PForest n t] | PAndLeaf t
+data PAnd n t = PAnd !Int ![PForest n t] | PAndLeaf !t
         deriving (Show)
 
-data PForest n t = POr n [PAnd n t] | PForestLeaf t
+data PForest n t = POr !n ![PAnd n t] | PForestLeaf !t
         deriving (Show)
 
 trivialAnnot :: CFG n t -> AnnotCFG n t ()
