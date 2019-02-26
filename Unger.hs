@@ -1,10 +1,11 @@
 {-# language ScopedTypeVariables #-}
 
-module UngerNaiveEpsilon where
+module Unger where
 
 import Control.Monad(guard, join)
 import Debug.Trace
 import Data.Functor(($>))
+import Data.Hashable
 import Data.List(inits, tails)
 import Data.Map(Map)
 import Data.Maybe(catMaybes, fromJust)
@@ -21,6 +22,31 @@ splits n xs = do
         (l, r) <- zip (inits xs) (tails xs)
         rec <- splits (n - 1) r
         return ((l:) rec)
+
+heurUnger :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
+        CCFG n t -> [t] -> Maybe (PForest n t)
+heurUnger acfg sent = heurUngerOr acfg sent (acfgStart acfg)
+
+heurUngerOr :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
+        CCFG n t -> [t] -> n -> Maybe (PForest n t)
+heurUngerOr acfg sent guess = let
+        (_, rhs) = ruleACFG acfg guess
+        mkLabelledPartitions n fs = fmap ((,) n . zip fs) $ splits (length fs) sent
+        labelledPartitions = ([0..length rhs] `zip` rhs) >>= uncurry mkLabelledPartitions
+        rec = (catMaybes (uncurry (heurUngerAnd acfg) <$> labelledPartitions))
+        in guard (not $ null rec) $> POr guess rec
+
+heurUngerAnd :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
+        CCFG n t -> Int -> [(Either n t, [t])] -> Maybe (PAnd n t)
+heurUngerAnd acfg@(ACFG _ rules) k ks = PAnd k <$> ((guard (all matching ks)) *> traverse rec ks)
+        where
+        -- an extra "breadth-firsty" stage to get us terminating
+        matching :: (Either n t, [t]) -> Bool
+        matching  (T t, ts) = ts == [t]
+        matching  (N n, ts) = matchesCompoundAnnot (fromJust (fst <$> Map.lookup n rules)) ts
+        rec :: (Either n t, [t]) -> Maybe (PForest n t)
+        rec (T t, ts) = Just (PForestLeaf t)
+        rec (N n, ts) = heurUngerOr acfg ts n
 
 unger :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         CFG n t -> [t] -> Maybe (PForest n t)

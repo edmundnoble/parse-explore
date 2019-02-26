@@ -43,11 +43,12 @@ extra-source-files:  ChangeLog.md
 
 -- Constraint on the version of Cabal needed to build this package.
 
-library parse-explore-lib
+executable parse-explore-lib
   -- .hs or .lhs file containing the Main module.
+  main-is: Main.hs
 
   -- Modules included in this executable, other than Main.
-  exposed-modules: Naive
+  exposed-modules: Naive, Unger, RightRecursiveToProductive, Common
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -59,6 +60,7 @@ library parse-explore-lib
                       ,containers
                       ,directory
                       ,dlist
+                      ,hashable
                       ,ansi-wl-pprint
                       ,filepath
                       ,ghc-prim
