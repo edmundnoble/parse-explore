@@ -37,8 +37,12 @@ ungerOr cfg sent guess = let
 
 ungerAnd :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         CFG n t -> Int -> [(Either n t, [t])] -> Maybe (PAnd n t)
-ungerAnd cfg k ks = PAnd k <$> traverse rec ks
+ungerAnd cfg k ks = PAnd k <$> ((guard (all matching ks)) *> traverse rec ks)
         where
+        -- an extra "breadth-firsty" stage to get us terminating
+        matching :: (Either n t, [t]) -> Bool
+        matching  (T t, ts) = ts == [t]
+        matching  _ = True
         rec :: (Either n t, [t]) -> Maybe (PForest n t)
         rec (T t, ts) | ts == [t] = Just (PForestLeaf t)
                       | otherwise = Nothing
