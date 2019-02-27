@@ -20,6 +20,8 @@ import qualified Data.ByteString.Unsafe as BSU
 import qualified Data.Trie as Trie
 
 import Common
+import Heur
+import Types
 
 -- create all possible partitions into `n` groups for a list.
 -- you can avoid treating epsilon rules
