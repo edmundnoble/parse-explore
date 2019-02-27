@@ -6,4 +6,4 @@ import Unger
 import Data.ByteString.Char8
 
 main :: IO ()
-main = print $ ungerBS arithGram (pack arithSampleBeeg)
+main = print $ ungerTrieMemoBS arithGram (pack arithSampleBeeg)

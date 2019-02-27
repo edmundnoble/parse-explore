@@ -49,6 +49,8 @@ executable parse-explore
 
   -- Modules included in this executable, other than Main.
   other-modules: Naive, Unger, RightRecursiveToProductive, Common
+                 ,Data.Trie,Data.Trie.BitTwiddle,Data.Trie.ByteStringInternal
+                 ,Data.Trie.Convenience,Data.Trie.Errors,Data.Trie.Internal
 
   ghc-options: -ddump-to-file -ddump-simpl -ddump-stg
 
@@ -56,7 +58,7 @@ executable parse-explore
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11 && <5
+  build-depends:       base >=4.10 && <5
                       ,array
                       ,bytestring
                       ,containers
@@ -75,6 +77,9 @@ executable parse-explore
                       ,time
                       ,unix
                       ,pqueue
+                      -- can't use this until the next release which supports my GHC version
+                      -- ,bytestring-trie
+                      ,binary
 
   -- Directories containing source files.
   -- hs-source-dirs:

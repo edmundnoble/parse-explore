@@ -142,7 +142,9 @@ compoundAnnot = foldAnnot (\t -> CompoundAnnot (blum t) (FancyMin (Just 1)) (Fan
 matchesCompoundAnnot :: Hashable t => CompoundAnnot -> [t] -> Bool
 matchesCompoundAnnot (CompoundAnnot bl (FancyMin (fmap getMin -> mi)) (FancyMax (fmap getMax -> ma))) ts =
         let len = length ts in
-                maybe True (<= len) mi && maybe True (>= len) ma && checkblum ts bl
+                maybe True (<= len) mi &&
+                maybe True (>= len) ma &&
+                checkblum ts bl
 
 cfgStart :: CFG n t -> n
 cfgStart (CFG s _) = s
@@ -195,7 +197,7 @@ arithGram = shortestRulesFirst $ CFG Expr (Map.fromList [
 arithSample1 = "(i+i)*i"
 arithSample2 = "i"
 arithSample3 = "i+i"
-arithSampleBeeg = go 4 where
+arithSampleBeeg = go 3 where
         go 0 = "i"
         go n = "(" ++ go (n - 1) ++ "+" ++ go (n - 1) ++ ")"
 
