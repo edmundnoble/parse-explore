@@ -11,10 +11,10 @@ import Data.Functor(($>))
 import Data.Functor.Compose
 import Data.Hashable
 import Data.List(inits, tails)
-import Data.Map(Map)
+import Data.Map.Strict(Map)
 import Data.Maybe(catMaybes, fromJust)
 import Data.Trie(Trie)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BSU
 import qualified Data.Trie as Trie
