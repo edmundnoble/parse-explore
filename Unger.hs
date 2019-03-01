@@ -43,7 +43,7 @@ splitsBS n xs = do
 
 ungerBS :: forall n. (Show n) => Ord n =>
         CFG n Char -> ByteString -> Maybe (PForest n Char)
-ungerBS cfg sent = ungerOrBS cfg sent (cfgStart cfg)
+ungerBS cfg sent = ungerOrBS cfg sent (startCFG cfg)
 
 ungerOrBS :: forall n. (Show n) => Ord n =>
         CFG n Char -> ByteString -> n -> Maybe (PForest n Char)
@@ -68,7 +68,7 @@ ungerAndBS cfg k ks = PAnd k <$> ((guard (all matching ks)) *> traverse rec ks)
 
 heurUnger :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
         CCFG n t -> [t] -> Maybe (PForest n t)
-heurUnger acfg sent = heurUngerOr acfg sent (acfgStart acfg)
+heurUnger acfg sent = heurUngerOr acfg sent (startACFG acfg)
 
 heurUngerOr :: forall n t. Hashable t => (Show n, Show t) => Eq t => Ord n =>
         CCFG n t -> [t] -> n -> Maybe (PForest n t)
@@ -93,7 +93,7 @@ heurUngerAnd acfg@(ACFG _ rules) k ks = PAnd k <$> ((guard (all matching ks)) *>
 
 unger :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         CFG n t -> [t] -> Maybe (PForest n t)
-unger cfg sent = ungerOr cfg sent (cfgStart cfg)
+unger cfg sent = ungerOr cfg sent (startCFG cfg)
 
 ungerOr :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         CFG n t -> [t] -> n -> Maybe (PForest n t)
@@ -130,7 +130,7 @@ ungerMemo :: forall n t. (Show n, Show t) => Eq t => Ord n => Ord t =>
         CFG n t ->
         [t] ->
         Maybe (PForest n t)
-ungerMemo cfg sent = flip evalState Map.empty $ ungerOrMemo cfg sent (cfgStart cfg)
+ungerMemo cfg sent = flip evalState Map.empty $ ungerOrMemo cfg sent (startCFG cfg)
 
 ungerOrMemo :: forall n t. (Show n, Show t) => Eq t => Ord n => Ord t =>
         CFG n t ->
@@ -158,7 +158,6 @@ ungerAndMemo :: forall n t. (Show n, Show t) => Eq t => Ord n => Ord t =>
         Memo n t (Maybe (PAnd n t))
 ungerAndMemo cfg k ks = do
         a <- getCompose $ traverse (Compose . rec) ks
-        let _ = a :: Maybe [PForest n t]
         let match = ((guard (all matching ks)) *>)
         return (PAnd k <$> (match a))
         where
@@ -174,7 +173,7 @@ ungerMemoBS :: forall n. (Show n) => Ord n =>
         CFG n Char ->
         ByteString ->
         Maybe (PForest n Char)
-ungerMemoBS cfg sent = flip evalState Map.empty $ ungerOrMemoBS cfg sent (cfgStart cfg)
+ungerMemoBS cfg sent = flip evalState Map.empty $ ungerOrMemoBS cfg sent (startCFG cfg)
 
 ungerOrMemoBS :: forall n. (Show n) => Ord n =>
         CFG n Char ->
@@ -217,7 +216,7 @@ ungerTrieMemoBS :: forall n. (Show n) => Ord n =>
         CFG n Char ->
         ByteString ->
         Maybe (PForest n Char)
-ungerTrieMemoBS cfg sent = flip evalState Map.empty $ ungerOrTrieMemoBS cfg sent (cfgStart cfg)
+ungerTrieMemoBS cfg sent = flip evalState Map.empty $ ungerOrTrieMemoBS cfg sent (startCFG cfg)
 
 ungerOrTrieMemoBS :: forall n. (Show n) => Ord n =>
         CFG n Char ->
@@ -262,7 +261,7 @@ ungerAndTrieMemoBS cfg k ks = do
 -- just a recognizer for now :/
 ungerRec :: forall n t. (Show n, Show t) => Eq t => Ord n =>
         [t] -> CFG n t -> Bool
-ungerRec ts cfg = go ts (cfgStart cfg) where
+ungerRec ts cfg = go ts (startCFG cfg) where
         go :: [t] -> n -> Bool
         go sent guess = let
                 rhs :: [[Either n t]]

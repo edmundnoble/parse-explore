@@ -31,8 +31,8 @@ annotCFG :: CFG n t -> (n -> [[Either n t]] -> a) -> AnnotCFG n t a
 annotCFG (CFG start rules) annot = ACFG start (annotRules rules)
         where annotRules = Map.mapWithKey (\k rhs -> (annot k rhs, rhs))
 
-acfgStart :: AnnotCFG n t a -> n
-acfgStart (ACFG s _) = s
+startACFG :: AnnotCFG n t a -> n
+startACFG (ACFG s _) = s
 
 newtype Bloom = Bloom Int
         deriving (Eq)

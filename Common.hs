@@ -29,8 +29,8 @@ import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 
 import Types
 
-cfgStart :: CFG n t -> n
-cfgStart (CFG s _) = s
+startCFG :: CFG n t -> n
+startCFG (CFG s _) = s
 
 ruleCFG :: Ord n => CFG n t -> n -> [[Either n t]]
 ruleCFG (CFG _ rs) n = fromJust (Map.lookup n rs)

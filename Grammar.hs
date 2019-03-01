@@ -3,7 +3,7 @@
 module Grammar where
 
 import Data.Either(isRight)
-import Data.Maybe(catMaybes)
+import Data.Maybe(catMaybes, listToMaybe)
 import Data.Map.Strict(Map)
 import Data.Set(Set)
 import qualified Data.Map.Strict as Map
@@ -42,30 +42,44 @@ removeUnreachable cfg@(CFG start rules) = let
         matchNonterm (N n) = Just n
         go reachableSoFar = let
                 newlyReachable = (reachableFromRules . ruleCFG cfg) `bindSet` reachableSoFar
-                in Set.union reachableSoFar (go newlyReachable)
+                in if newlyReachable == Set.empty
+                then Set.empty
+                else Set.union reachableSoFar (go newlyReachable)
 
 removeNonProductive :: (Ord n, Show n) => CFG n t -> CFG n t
 removeNonProductive cfg@(CFG start rules) = let
-        startProductive = Map.keysSet $ Map.filter (any (all isRight)) rules
-        allProductive = go startProductive
+        begin = Map.keysSet $ Map.filter (any (all isRight)) rules
+        continue sofar = let
+                ruleIsProductive = all (either (`Set.member` sofar) (const True))
+                in Map.keysSet $ Map.filter (any ruleIsProductive) rules
+        allProductive = transitiveClosure begin continue
         removeNonProductiveNonTerminals rs = Map.filterWithKey (\k _ -> k `Set.member` allProductive) rules
         -- guaranteed never to return []
         -- also removes undefined nonterminals, because undefined nonterminals
         -- are not productive!
         removeNonProductiveRules = filter (
                 all (either (`Set.member` allProductive) (const True)))
-        newRules = fmap removeNonProductiveRules $ removeNonProductiveNonTerminals $ rules
+        newRules = fmap removeNonProductiveRules . removeNonProductiveNonTerminals $ rules
         in if null allProductive
                 -- nothing we can do; all rules are non-productive
                 then cfg
                 else traceShow allProductive $ CFG start newRules
         where
-        go productiveSoFar = let
-                newlyProductive = Map.keysSet $
-                        Map.filter (any (all (either (`Set.member` productiveSoFar) (const True)))) rules
-                in if newlyProductive `Set.isSubsetOf` productiveSoFar
-                        then productiveSoFar
-                        else go newlyProductive
+
+transitiveClosure :: Ord fact => Set fact -> (Set fact -> Set fact) -> Set fact
+transitiveClosure start continue = start `Set.union` go start
+        where
+        go sofar = let
+                new = continue sofar
+                in if new `Set.isSubsetOf` sofar
+                then sofar
+                else sofar `Set.union` go new
+
+leftCornerSet :: (Ord n, Ord t) => CFG n t -> n -> Set (Either n t)
+leftCornerSet cfg begin = transitiveClosure (Set.singleton (Left begin)) (bindSet explore)
+        where
+        explore (Right t) = Set.empty
+        explore (Left n) = Set.fromList $ catMaybes $ listToMaybe <$> ruleCFG cfg n
 
 data Test = S | A | B | C | D | E | F
         deriving (Eq, Ord, Show)
