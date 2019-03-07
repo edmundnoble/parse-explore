@@ -64,7 +64,6 @@ removeNonProductive cfg@(CFG start rules) = let
                 -- nothing we can do; all rules are non-productive
                 then cfg
                 else traceShow allProductive $ CFG start newRules
-        where
 
 transitiveClosure :: Ord fact => Set fact -> (Set fact -> Set fact) -> Set fact
 transitiveClosure start continue = start `Set.union` go start
@@ -75,11 +74,11 @@ transitiveClosure start continue = start `Set.union` go start
                 then sofar
                 else sofar `Set.union` go new
 
-leftCornerSet :: (Ord n, Ord t) => CFG n t -> n -> Set (Either n t)
-leftCornerSet cfg begin = transitiveClosure (Set.singleton (Left begin)) (bindSet explore)
+leftCornerSet :: (Ord n, Ord t) => (n -> [[Either n t]]) -> Set n -> Set (Either n t)
+leftCornerSet rule begin = transitiveClosure (Set.map Left begin) (bindSet explore)
         where
         explore (Right t) = Set.empty
-        explore (Left n) = Set.fromList $ catMaybes $ listToMaybe <$> ruleCFG cfg n
+        explore (Left n) = Set.fromList $ catMaybes $ listToMaybe <$> rule n
 
 data Test = S | A | B | C | D | E | F
         deriving (Eq, Ord, Show)

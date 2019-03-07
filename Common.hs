@@ -50,6 +50,9 @@ data TDH
         | List
         deriving (Eq, Ord, Show)
 
+instance Pretty TDH where
+        pretty = text . show
+
 tdhGram = shortestRulesFirst $ CFG Sentence (Map.fromList [
         (Name, (fmap T <$> ["tom", "dick", "harry"])),
         (Sentence, [[N Name], [N List] ++ (T <$> "and") ++ [Left Name]]),
@@ -65,6 +68,9 @@ data Arith
         | Term
         | Factor
         deriving (Eq, Ord, Show)
+
+instance Pretty Arith where
+        pretty = text . show
 
 arithGram = shortestRulesFirst $ CFG Expr (Map.fromList [
         (Expr, [[N Expr, T '+', N Term], [N Term]]),
