@@ -107,10 +107,15 @@ ts str a = trace (str ++ " : " ++ show a) a
 
 feedTerm :: forall n t. (Show t, Show n) => (Ord t, Ord n) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
 feedTerm cfg (EarleyChart i cs ips) t = let
-        scan news (InProgressEntry i' l nt sofar (next:rem'))
+        scan new (InProgressEntry i' l nt sofar (Right next:rem'))
+                | new == next = Just . Left $ InProgressEntry i' l nt (Right next:sofar) rem'
+                | otherwise   = Nothing
+        scan _ ipe = Just $ Right ipe
+
+        scanNonterms news (InProgressEntry i' l nt sofar (Left next:rem'))
                 | Set.member next news =
-                        Just . Left $ InProgressEntry i' l nt (next:sofar) rem'
-        scan news ipe
+                        Just . Left $ InProgressEntry i' l nt (Left next:sofar) rem'
+        scanNonterms news ipe
                 = Just (Right ipe)
 
         complete e@(InProgressEntry i' _ n sf [])
@@ -122,25 +127,36 @@ feedTerm cfg (EarleyChart i cs ips) t = let
 
         entryFromNonterm n = Set.fromList $ InProgressEntry i 0 n [] <$> ruleCFG cfg n
 
-        doIt ip news = let
-                (advanced, stuck) = collectUnzipWith (scan news) ip
+        propagate ip news = let
+                (advanced, stuck) = collectUnzipWith (scanNonterms news) ip
                 (newlyComplete, incomplete) = collectUnzipWith complete advanced
                 newNonterms = bindSet (maybeToSet . either Just (const Nothing)) $
                         leftCornerSet (inProgressRules stuck) (Set.fromList $ completeSym <$> newlyComplete)
                 newEntries = Set.toList $ entryFromNonterm `bindSet` newNonterms
-                traceIp = trace $ "\nip " ++ show ip
-                traceNews = trace $ "news " ++ show news
-                in traceIp $ traceNews $
-                      if | null advanced ->
+                in if | null advanced ->
                                 ([], [])
-                         | null newlyComplete ->
+                      | null newlyComplete ->
                                 ([], advanced ++ stuck)
-                         | otherwise ->
+                      | otherwise ->
                                 over _1 (++ newlyComplete) $
                                 over _2 (++ newEntries ++ incomplete) $
-                                        doIt stuck (Set.fromList $ Left . completeSym <$> newlyComplete)
-        (newlyComplete, inProgress) = doIt (Set.toList ips) (Set.singleton (Right t))
-        in EarleyChart (i+1) newlyComplete (Set.fromList inProgress)
+                                        propagate stuck (Set.fromList $ completeSym <$> newlyComplete)
+
+        (advanced, stuck) = collectUnzipWith (scan t) (Set.toList ips)
+        (newlyComplete, incomplete) = collectUnzipWith complete advanced
+        newNonterms = bindSet (maybeToSet . either Just (const Nothing)) $
+                leftCornerSet (inProgressRules stuck) (Set.fromList $ completeSym <$> newlyComplete)
+        newEntries = Set.toList $ entryFromNonterm `bindSet` newNonterms
+        (newlyComplete', inProgress') =
+                if | null advanced ->
+                        ([], [])
+                        | null newlyComplete ->
+                        ([], advanced ++ stuck)
+                        | otherwise ->
+                        over _1 (++ newlyComplete) $
+                        over _2 (++ newEntries ++ incomplete) $
+                                propagate stuck (Set.fromList $ completeSym <$> newlyComplete)
+        in EarleyChart (i+1) newlyComplete' (Set.fromList inProgress')
 
 feedAll gram str =
         appEndo $ getDual $ foldMap (Dual . Endo) $ flip (feedTerm gram) <$> str
