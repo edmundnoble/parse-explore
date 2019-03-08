@@ -105,7 +105,7 @@ collectUnzipWith f (a:as) = case f a of
 
 ts str a = trace (str ++ " : " ++ show a) a
 
-feedTerm :: forall n t. (Show t, Show n) => (Ord t, Ord n) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
+feedTerm :: forall n t. (Ord n, Ord t) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
 feedTerm cfg (EarleyChart i cs ips) t = let
         scan new (InProgressEntry i' l nt sofar (Right next:rem'))
                 | new == next = Just . Left $ InProgressEntry i' l nt (Right next:sofar) rem'
@@ -158,5 +158,6 @@ feedTerm cfg (EarleyChart i cs ips) t = let
                                 propagate stuck (Set.fromList $ completeSym <$> newlyComplete)
         in EarleyChart (i+1) newlyComplete' (Set.fromList inProgress')
 
+feedAll :: (Ord n, Ord t) => CFG n t -> [t] -> EarleyChart n t -> EarleyChart n t
 feedAll gram str =
         appEndo $ getDual $ foldMap (Dual . Endo) $ flip (feedTerm gram) <$> str
