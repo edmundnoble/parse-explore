@@ -64,18 +64,18 @@ tdhSample2 = "tom,dickandharry"
 tdhSample3 = "tomanddick"
 
 data Arith
-        = Expr
-        | Term
-        | Factor
+        = ArithExpr
+        | ArithTerm
+        | ArithFactor
         deriving (Eq, Ord, Show)
 
 instance Pretty Arith where
         pretty = text . show
 
-arithGram = shortestRulesFirst $ CFG Expr (Map.fromList [
-        (Expr, [[N Expr, T '+', N Term], [N Term]]),
-        (Term, [[N Term, T '*', N Factor], [N Factor]]),
-        (Factor, [[T '(', N Expr, T ')'], [T 'i']])
+arithGram = shortestRulesFirst $ CFG ArithExpr (Map.fromList [
+        (ArithExpr, [[N ArithExpr, T '+', N ArithTerm], [N ArithTerm]]),
+        (ArithTerm, [[N ArithTerm, T '*', N ArithFactor], [N ArithFactor]]),
+        (ArithFactor, [[T '(', N ArithExpr, T ')'], [T 'i']])
         ])
 
 arithSample1 = "(i+i)*i"
@@ -87,4 +87,31 @@ arithSampleBeeg = go 3 where
 
 arithAmbiGram = shortestRulesFirst $ CFG Expr (Map.fromList [
         (Expr, [[T 'i'], [T '(', N Expr, T ')'], [N Expr, T '+', N Expr], [N Expr, T '*', N Expr]])
+        ])
+
+data HsGram = TLS | Assignment | Annotation | Expr | Let | Do | DoStmt | Where | App | Ident | Pattern
+        deriving (Eq, Ord, Show)
+
+data HsTok
+        = TDo | TLet | TIn | TWhere
+        | TDoubleColon | TLeftArr | TEq | TSemicolon
+        | TLeftBrace | TRightBrace
+        | TLeftBrack | TRightBrack
+        | TLeftParen | TRightParen
+        | TIdent String
+        deriving (Eq, Ord, Show)
+
+hsGram = shortestRulesFirst $ CFG TLS (Map.fromList [
+        (TLS, [[N Assignment], [N Annotation]]),
+        (Assignment, [[N Pattern, T TEq, N Expr, N Where]]),
+        (Annotation, [[N Ident, T TDoubleColon, N Expr]]),
+        (Where, [[], [T TWhere, N Assignment]]),
+        (Expr, [
+                [T TLet, N Let],
+                [T TDo, N Do],
+                [N App]
+                ]),
+        (Let, [[N Pattern, T TEq, N Expr, T TIn, N Expr]]),
+        (DoStmt, [[N Pattern, T TLeftArr, N Expr]]),
+        (Do, [[N DoStmt, N Do], []])
         ])
