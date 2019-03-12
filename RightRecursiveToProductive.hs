@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 -- productive; all rules contain a terminal first.
 type PRules n t = n -> Map t (Maybe n)
 
+-- turns out this is just a DFA
 data Productive n t = Productive n (PRules n t)
 
 startP :: Productive n t -> n
@@ -28,7 +29,6 @@ testGram = Productive A $ \case
                 [('c', Nothing)]
 
 -- appears to take the trace of a moore machine?
--- this is just a regex DFA lmao
 kenProductive ::
         Ord t =>
         Productive n t -> [t] -> ([n], [t])
