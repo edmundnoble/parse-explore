@@ -105,48 +105,56 @@ collectUnzipWith f (a:as) = case f a of
 
 ts str a = trace (str ++ " : " ++ show a) a
 
-feedTerm :: forall n t. (Ord n, Ord t) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
-feedTerm cfg (EarleyChart i cs ips) t = let
-        scan new (InProgressEntry i' l nt sofar (Right next:rem'))
-                | new == next = Just . Left $ InProgressEntry i' l nt (Right next:sofar) rem'
-                | otherwise   = Nothing
-        scan _ ipe = Just $ Right ipe
+entryFromNonterm cfg i n = Set.fromList $ InProgressEntry i 0 n [] <$> ruleCFG cfg n
 
-        scanNonterms news (InProgressEntry i' l nt sofar (Left next:rem'))
-                | Set.member next news =
-                        Just . Left $ InProgressEntry i' l nt (Left next:sofar) rem'
-        scanNonterms news ipe
-                = Just (Right ipe)
+inProgressRules is n = (^. remaining) <$> (filter ((== n) . inProgressSym) is)
 
-        complete e@(InProgressEntry i' _ n sf [])
-                = Just $ Left $ FinishedEntry i' (i - i') n (reverse sf)
-        complete e
-                = Just (Right e)
+-- seems like this should be unified with `scanNonterms`
+-- to clear up unsatisfiable rules?
+scan new (InProgressEntry i' l nt sofar (Right next:rem'))
+        | new == next = Just . Left $ InProgressEntry i' l nt (Right next:sofar) rem'
+        | otherwise   = Nothing
+scan _ ipe = Just $ Right ipe
 
-        inProgressRules is n = (^. remaining) <$> (filter ((== n) . inProgressSym) is)
+scanNonterms news (InProgressEntry i' l nt sofar (Left next:rem'))
+        | Set.member next news =
+                Just . Left $ InProgressEntry i' l nt (Left next:sofar) rem'
+scanNonterms news ipe
+        = Just (Right ipe)
 
-        entryFromNonterm n = Set.fromList $ InProgressEntry i 0 n [] <$> ruleCFG cfg n
+complete i e@(InProgressEntry i' _ n sf [])
+        = Just $ Left $ FinishedEntry i' i n (reverse sf)
+complete i e
+        = Just (Right e)
 
-        propagate ip news = let
-                (advanced, stuck) = collectUnzipWith (scanNonterms news) ip
-                (newlyComplete, incomplete) = collectUnzipWith complete advanced
-                newNonterms = bindSet (maybeToSet . either Just (const Nothing)) $
-                        leftCornerSet (inProgressRules stuck) (Set.fromList $ completeSym <$> newlyComplete)
-                newEntries = Set.toList $ entryFromNonterm `bindSet` newNonterms
-                in if | null advanced ->
-                                ([], [])
-                      | null newlyComplete ->
-                                ([], advanced ++ stuck)
-                      | otherwise ->
-                                over _1 (++ newlyComplete) $
-                                over _2 (++ newEntries ++ incomplete) $
-                                        propagate stuck (Set.fromList $ completeSym <$> newlyComplete)
-
-        (advanced, stuck) = collectUnzipWith (scan t) (Set.toList ips)
-        (newlyComplete, incomplete) = collectUnzipWith complete advanced
+propagate :: (Ord a, Ord t) =>
+     CFG a t
+     -> Int
+     -> [InProgressEntry a t]
+     -> Set a
+     -> ([FinishedEntry a t], [InProgressEntry a t])
+propagate cfg i ip news = let
+        (advanced, stuck) = collectUnzipWith (scanNonterms news) ip
+        (newlyComplete, incomplete) = collectUnzipWith (complete i) advanced
         newNonterms = bindSet (maybeToSet . either Just (const Nothing)) $
                 leftCornerSet (inProgressRules stuck) (Set.fromList $ completeSym <$> newlyComplete)
-        newEntries = Set.toList $ entryFromNonterm `bindSet` newNonterms
+        newEntries = Set.toList $ entryFromNonterm cfg i `bindSet` newNonterms
+        in if | null advanced ->
+                        ([], [])
+                | null newlyComplete ->
+                        ([], advanced ++ stuck)
+                | otherwise ->
+                        over _1 (++ newlyComplete) $
+                        over _2 (++ newEntries ++ incomplete) $
+                                propagate cfg i stuck (Set.fromList $ completeSym <$> newlyComplete)
+
+feedTerm :: forall n t. (Ord n, Ord t) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
+feedTerm cfg (EarleyChart i cs ips) t = let
+        (advanced, stuck) = collectUnzipWith (scan t) (Set.toList ips)
+        (newlyComplete, incomplete) = collectUnzipWith (complete i) advanced
+        newNonterms = bindSet (maybeToSet . either Just (const Nothing)) $
+                leftCornerSet (inProgressRules stuck) (Set.fromList $ completeSym <$> newlyComplete)
+        newEntries = Set.toList $ entryFromNonterm cfg i `bindSet` newNonterms
         (newlyComplete', inProgress') =
                 if | null advanced ->
                         ([], [])
@@ -155,7 +163,7 @@ feedTerm cfg (EarleyChart i cs ips) t = let
                         | otherwise ->
                         over _1 (++ newlyComplete) $
                         over _2 (++ newEntries ++ incomplete) $
-                                propagate stuck (Set.fromList $ completeSym <$> newlyComplete)
+                                propagate cfg i stuck (Set.fromList $ completeSym <$> newlyComplete)
         in EarleyChart (i+1) newlyComplete' (Set.fromList inProgress')
 
 feedAll :: (Ord n, Ord t) => CFG n t -> [t] -> EarleyChart n t -> EarleyChart n t
