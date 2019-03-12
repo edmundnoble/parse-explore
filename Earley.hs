@@ -111,28 +111,31 @@ inProgressRules is n = (^. remaining) <$> (filter ((== n) . inProgressSym) is)
 
 -- seems like this should be unified with `scanNonterms`
 -- to clear up unsatisfiable rules?
+scan :: Eq t => t -> InProgressEntry n t -> Maybe (Either (InProgressEntry n t) (InProgressEntry n t))
 scan new (InProgressEntry i' l nt sofar (Right next:rem'))
         | new == next = Just . Left $ InProgressEntry i' l nt (Right next:sofar) rem'
         | otherwise   = Nothing
 scan _ ipe = Just $ Right ipe
 
+scanNonterms :: Ord n => Set n -> InProgressEntry n t -> Maybe (Either (InProgressEntry n t) (InProgressEntry n t))
 scanNonterms news (InProgressEntry i' l nt sofar (Left next:rem'))
         | Set.member next news =
                 Just . Left $ InProgressEntry i' l nt (Left next:sofar) rem'
 scanNonterms news ipe
         = Just (Right ipe)
 
+complete :: Int -> InProgressEntry n t -> Maybe (Either (FinishedEntry n t) (InProgressEntry n t))
 complete i e@(InProgressEntry i' _ n sf [])
-        = Just $ Left $ FinishedEntry i' i n (reverse sf)
+        = Just $ Left (FinishedEntry i' i n (reverse sf))
 complete i e
         = Just (Right e)
 
-propagate :: (Ord a, Ord t) =>
-     CFG a t
+propagate :: (Ord n, Ord t) =>
+     CFG n t
      -> Int
-     -> [InProgressEntry a t]
-     -> Set a
-     -> ([FinishedEntry a t], [InProgressEntry a t])
+     -> [InProgressEntry n t]
+     -> Set n
+     -> ([FinishedEntry n t], [InProgressEntry n t])
 propagate cfg i ip news = let
         (advanced, stuck) = collectUnzipWith (scanNonterms news) ip
         (newlyComplete, incomplete) = collectUnzipWith (complete i) advanced
@@ -141,13 +144,15 @@ propagate cfg i ip news = let
         newEntries = Set.toList $ entryFromNonterm cfg i `bindSet` newNonterms
         in if | null advanced ->
                         ([], [])
-                | null newlyComplete ->
+              | null newlyComplete ->
                         ([], advanced ++ stuck)
-                | otherwise ->
+              | otherwise ->
                         over _1 (++ newlyComplete) $
                         over _2 (++ newEntries ++ incomplete) $
                                 propagate cfg i stuck (Set.fromList $ completeSym <$> newlyComplete)
 
+-- we have to replicate part of `propagate` in here, but it works a bit differently because we're
+-- dealing with a new terminal, not new nonterminals. Not sure if it's worth fixing.
 feedTerm :: forall n t. (Ord n, Ord t) => CFG n t -> EarleyChart n t -> t -> EarleyChart n t
 feedTerm cfg (EarleyChart i cs ips) t = let
         (advanced, stuck) = collectUnzipWith (scan t) (Set.toList ips)
