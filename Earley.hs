@@ -105,8 +105,10 @@ collectUnzipWith f (a:as) = case f a of
 
 ts str a = trace (str ++ " : " ++ show a) a
 
+entryFromNonterm :: (Ord n, Ord t) => CFG n t -> Int -> n -> Set (InProgressEntry n t)
 entryFromNonterm cfg i n = Set.fromList $ InProgressEntry i 0 n [] <$> ruleCFG cfg n
 
+inProgressRules :: Eq n => [InProgressEntry n t] -> n -> [[Either n t]]
 inProgressRules is n = (^. remaining) <$> (filter ((== n) . inProgressSym) is)
 
 -- seems like this should be unified with `scanNonterms`
