@@ -50,11 +50,11 @@ executable parse-explore
   -- Modules included in this executable, other than Main.
   other-modules: Naive, Unger, RightRecursiveToProductive
                  ,Common, Types, Heur, Grammar, Earley, Greibach
-                 ,GeneralCYK
+                 ,GeneralCYK, CYK
                  ,Data.Trie,Data.Trie.BitTwiddle,Data.Trie.ByteStringInternal
                  ,Data.Trie.Convenience,Data.Trie.Errors,Data.Trie.Internal
 
-  ghc-options: -ddump-to-file -ddump-simpl -ddump-stg
+  ghc-options:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -70,15 +70,16 @@ executable parse-explore
                       ,ansi-wl-pprint
                       ,filepath
                       ,ghc-prim
+                      ,kan-extensions
                       ,mmap
                       ,primitive
-                      ,kan-extensions
                       ,transformers
                       ,mtl
                       ,lens
                       ,time
                       ,unix
                       ,pqueue
+                      ,text-latin1
                       -- can't use this until the next release which supports my GHC version
                       -- ,bytestring-trie
                       ,binary

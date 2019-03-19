@@ -11,7 +11,7 @@ import Data.Map(Map)
 import Grammar
 import Types
 
-type CYKChart n t = [[Either [n] t]]
+type CYKChart n t = [PTree [n] t]
 
 start :: [t] -> CYKChart n t
 start = fmap PLeaf
